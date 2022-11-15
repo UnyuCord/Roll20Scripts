@@ -1,1 +1,0 @@
-This script simply automatically sets hp bars for tokens on the field (it does not link them to a character), notifies if a monster is bloodied, and flags tokens as dead if the HP value is below or equal zero.
