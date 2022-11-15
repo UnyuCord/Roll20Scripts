@@ -38,7 +38,8 @@ on('change:graphic', async function(obj) {
 
     }
 
-    if (obj.get('bar1_value') <= 0) {
+    if (obj.get('bar1_value') <= 0
+      	&& obj.get('status_dead')) {
 
       if (type === 'Monster') {
 
