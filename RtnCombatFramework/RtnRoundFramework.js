@@ -45,25 +45,17 @@ on('ready', () => {
 
                         Campaign().set('turnorder', JSON.stringify(turnOrder));
 
-                        log('RT: Emptied the turn order!');
-
                     }
 
                     await sendChat('', `/desc Combat has started!!!\n/desc Roll for initiative!\n[Start Tracking](!combat startTrack)`);
                     break;
 
                 case 'startTrack':
-                    
-
-                    log(`Is player gm? ${playerIsGM(msg.playerid)}, Player id: ${msg.playerid}`);
 
                     if(!playerIsGM(msg.playerid)) return;
 
-                    log('Before if empty turnorder query');
                     turnOrder = JSON.parse(Campaign().get('turnorder'));
-                    log('Got turnOrder obj!');
                     if (!turnOrder) return sendChat('', '/desc The turn order is empty! Roll for initiative!');
-                    log('After if empty turnorder query');
 
                     state.rtnEncounter.numOfCombatants = turnOrder.length;
                     state.rtnEncounter.trackingActive = true;
