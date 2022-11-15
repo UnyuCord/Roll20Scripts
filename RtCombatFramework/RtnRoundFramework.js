@@ -94,7 +94,7 @@ on('ready', () => {
 
 
                 case 'stopTrack':
-                    if (!state.rtnEncounter.trackingActive) return;
+                    if (!state.rtnEncounter.trackingActive || !playerIsGM(msg.playerid)) return;
                     await sendChat('', '/desc Combat has ended!');
                     state.rtnEncounter.trackingActive = false;
                     break;
