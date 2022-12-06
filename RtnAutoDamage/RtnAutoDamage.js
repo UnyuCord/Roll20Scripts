@@ -7,7 +7,7 @@ const autoDamageOptions = {
     ANNOUNCE_PLAYER_DAMAGE: true,
     ANNOUNCE_MONSTER_DAMAGE: true
 
-}
+};
 
 on('ready', () => {
 
@@ -21,9 +21,7 @@ on('chat:message', origMsg => {
 
     if (message.inlineRolls && (/{{dmg\d=/).test(message.content)) {
 
-        const roll = extractRoll(message);
-    
-        log(roll.damage);
+        const rawRoll = extractRoll(message);
 
     }
 
@@ -44,5 +42,6 @@ function extractRoll(msg) {
 
 function getValueFromRoll(msg, field) {
 
-}
+    const pattern = new RegExp(`{{${field}=(.+?)}}`)
 
+}
