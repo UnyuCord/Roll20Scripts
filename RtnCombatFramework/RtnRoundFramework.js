@@ -1,3 +1,5 @@
+'use strict';
+
 on('ready', () => {
     
     log('RT: RoundFramework ready!');
@@ -38,6 +40,8 @@ on('ready', () => {
                     };
 
                     turnOrder = JSON.parse(Campaign().get('turnorder'));
+
+
 
                     if (turnOrder) {
 
@@ -119,6 +123,30 @@ on('ready', () => {
         sendPing(turnOf.get('left'), turnOf.get('top'), Campaign().get('playerpageid'));
 
     }
-});
 
+    function calculateEncounterDifficulty(turnOrder) {
+
+        const encounterChatString = {
+            EASY_ENCOUNTER: 'This looks like an easy battle!',
+            MEDIUM_ENCOUNTER: 'This looks like a balanced battle!',
+            HARD_ENCOUNTER: 'This looks like a rough battle!',
+            DEADLY_ENCOUNTER: 'This is going to end badly...'
+        };
+        const currentPageGraphics = findObjs({
+            _pageid: Campaign().get('playerpageid'),
+            _type: 'graphic'
+
+        });
+
+        let numOfPlayers;
+        let numOfMonsters;
+
+        _.each(currentPageGraphics);
+        
+    }
+
+    function calculateEncounterXp() {
+
+    }
+});
 

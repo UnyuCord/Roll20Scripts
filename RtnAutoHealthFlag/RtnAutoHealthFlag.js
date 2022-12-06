@@ -1,3 +1,5 @@
+'use strict';
+
 on('change:graphic', async function(obj) {
 
   const character = getObj('character', obj.get('_represents'));
@@ -68,7 +70,5 @@ on('change:graphic', async function(obj) {
       obj.set({
         'status_dead': false
       });
-
     }
-
 });
