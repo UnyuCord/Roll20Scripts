@@ -9,7 +9,8 @@ on('ready', () => {
             combatRound: 1,
             turn: null,
             numOfCombatants: 0,
-            trackingActive: false
+            trackingActive: false,
+            difficulty: null
 
         };
     }
@@ -21,6 +22,19 @@ on('ready', () => {
         if (msg.type === 'api' && msg.content.includes('!combat')) {
 
             const option = msg.content.replace('!combat ', '');
+            const rtnRoundFrameworkOptions = {
+
+                // Displays the difficulty of the encounter if set to true
+                ANNOUNCE_DIFFICULTY: true,
+                // Divides the XP equally among the players if set to true, if set to false, gives all players the full amount
+                DISTRIBUTE_XP: true,
+                // Automatically adds the XP at the end of a battle
+                AUTO_APPLY_XP: true,
+                // Levels up players automatically if set to true
+                AUTO_LEVEL_UP: true,
+                // Multiplies the XP depending on encounter difficulty
+                DIFFICULTY_MULTIPLIER: true,
+            }
 
             switch (option) {
 
@@ -47,7 +61,7 @@ on('ready', () => {
 
                     }
 
-                    await sendChat('', `/desc Combat has started!!!\n/desc Roll for initiative!\n[Start Tracking](!combat startTrack)`);
+                    await sendChat('', `/desc Roll for initiative!\n[Start Tracking](!combat startTrack)`);
                     break;
 
                 case 'startTrack':
@@ -57,8 +71,14 @@ on('ready', () => {
                     turnOrder = JSON.parse(Campaign().get('turnorder'));
                     if (!turnOrder) return sendChat('', '/desc The turn order is empty! Roll for initiative!');
 
+
+
                     state.rtnEncounter.numOfCombatants = turnOrder.length;
                     state.rtnEncounter.trackingActive = true;
+
+                    state.rtnEncounter.difficulty = calculateCombatDifficulty(turnOrder);
+
+                    await sendChat('', `/desc The battle has started!\n${state.rtnEncounter.difficulty}`)
 
                     outputRoundInfo(turnOrder);
                     break;
@@ -119,6 +139,18 @@ on('ready', () => {
         sendPing(turnOf.get('left'), turnOf.get('top'), Campaign().get('playerpageid'));
 
     }
+
+    function calculateCombatDifficulty(turnOrder) {
+        
+        const playerLevels;
+        const numOfMonsters;
+    }
+
+    function calculateXp(turnOrder) {
+
+    }
+
+    
 });
 
 
