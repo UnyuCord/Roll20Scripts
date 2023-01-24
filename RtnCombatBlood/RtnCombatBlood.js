@@ -1,23 +1,38 @@
 'use strict'
 
-on('ready', () => {
-    log(('RT: CombatBlood ready!'));
-});
-
 // Options
+//------------------------------------------------------------------
 const combatBloodOptions = {
     HEALTH_BAR: 'bar1',
-    BLOOD_TYPES: {
-        RESOURCE_BLOOD: ['https://s3.amazonaws.com/files.d20.io/images/324305850/gD0DRRM1qG4b11_3P2Tqfg/thumb.png?1674474005',
-                        'https://s3.amazonaws.com/files.d20.io/images/324305981/06BnVUK87ka-sev1hSgagA/thumb.png?1674474172',
-                        'https://s3.amazonaws.com/files.d20.io/images/324305875/lyGFgvMgtimuysfZ1MsRsA/thumb.png?1674474033']
-    },
-    MAXIMUM_SIZE: {
+    BLOOD_TYPE_PREFIX: 'blood_',
+    DEFAULT_BLOOD_GRAPHIC_NAME: 'blood_default',
+    MIN_ALLOWED_MULTIPLIER: 0.10,
+    MAX_SIZE_MULTIPLIER: 1.5,
+    BLOOD_BASE_SIZE: {
         WIDTH: 400,
         HEIGHT: 400
-    },
-    MAXIMUM_BLOOD: 0
+    }
 };
+//------------------------------------------------------------------
+
+on('ready', () => {
+
+    log(('RT: CombatBlood ready!'));
+
+    on('add:character', function(character) {
+
+        createObj('attribute', {
+            name: 'canBleed',
+            current: 1,
+            characterid: character.id
+        });
+        createObj('attribute', {
+            name: 'bleedType',
+            current: 'default',
+            characterid: character.id
+        });
+    });
+});
 
 on(`change:graphic:${combatBloodOptions.HEALTH_BAR}_value`, function(obj, prev) {
 
@@ -25,29 +40,56 @@ on(`change:graphic:${combatBloodOptions.HEALTH_BAR}_value`, function(obj, prev) 
 
     const currentHealthVal = graphic.get(`${combatBloodOptions.HEALTH_BAR}_value`);
     const prevHealthVal = prev[`${combatBloodOptions.HEALTH_BAR}_value`];
-    const character = getObj('character', graphic.get('_represents'));
-    const damageDealt = currentHealthVal - prevHealthVal;
+    const character =  getObj('character', graphic.get('_represents'));
 
-    if (damageDealt < 0 && getAttrByName(character.id, 'canBleed')) {
+    if (!character) return;
+
+    const damageDealt = currentHealthVal - prevHealthVal;
+    const characterBleeds = getAttrByName(character.id, 'canBleed') || 1;
+
+    if (damageDealt < 0 && characterBleeds == 1) {
 
         const bloodScaleMultiplier = Math.abs(damageDealt / graphic.get(`${combatBloodOptions.HEALTH_BAR}_max`));
+        if (bloodScaleMultiplier < combatBloodOptions.MIN_ALLOWED_MULTIPLIER) return;
 
-        let bloodWidth = graphic.get('width') * bloodScaleMultiplier;
-        let bloodHeight = graphic.get('height') * bloodScaleMultiplier;
+        const characterBleedType = getAttrByName(character.id, 'bleedType') || 'default';
 
-        if (bloodWidth > combatBloodOptions.MAXIMUM_SIZE.WIDTH || bloodHeight > combatBloodOptions.MAXIMUM_SIZE.HEIGHT && combatBloodOptions.MAXIMUM_SIZE.WIDTH > 0) {
+        let bloodGraphics = findObjs({
+            _type: 'handout',
+            name: combatBloodOptions.BLOOD_TYPE_PREFIX + characterBleedType
+        });
 
-            bloodWidth = combatBloodOptions.MAXIMUM_SIZE.WIDTH;
-            bloodHeight = combatBloodOptions.MAXIMUM_SIZE.HEIGHT;
+        if (!bloodGraphics.length) {
+
+            log(`RT: Did not find bloodgraphic ${combatBloodOptions.BLOOD_TYPE_PREFIX + characterBleedType}, attempting default ${combatBloodOptions.DEFAULT_BLOOD_GRAPHIC_NAME}`);
+
+            bloodGraphics = findObjs({
+                _type: 'handout',
+                name: combatBloodOptions.DEFAULT_BLOOD_GRAPHIC_NAME
+            });
+
+            if (!bloodGraphics.length) return log('RT: No bloodgraphics found!');
+        }
+
+        let bloodWidth = combatBloodOptions.BLOOD_BASE_SIZE.WIDTH * bloodScaleMultiplier;
+        let bloodHeight = combatBloodOptions.BLOOD_BASE_SIZE.HEIGHT * bloodScaleMultiplier;
+
+        const maximumWidth = graphic.get('width') * combatBloodOptions.MAX_SIZE_MULTIPLIER;
+        const maximumHeight = graphic.get('height') * combatBloodOptions.MAX_SIZE_MULTIPLIER;
+
+        if (bloodWidth > maximumWidth || bloodHeight > maximumHeight && combatBloodOptions.BLOOD_BASE_SIZE.WIDTH >  0) {
+
+            bloodWidth = maximumWidth;
+            bloodHeight = maximumHeight;
         }
         const MAX_ROTATION = 360;
-        log(bloodScaleMultiplier);
 
         toFront(createObj('graphic',  {
+            
             name: 'rtnCombatBlood',
-            imgsrc: combatBloodOptions.BLOOD_TYPES.RESOURCE_BLOOD[randomInteger(combatBloodOptions.BLOOD_TYPES.RESOURCE_BLOOD.length) - 1],
-            left: graphic.get('left'),
-            top: graphic.get('top'),
+            imgsrc: bloodGraphics[randomInteger(bloodGraphics.length) - 1].get('avatar').replace('med', 'thumb'),
+            left: graphic.get('left') + getRandomSignedNumber(graphic.get('width')),
+            top: graphic.get('top') + getRandomSignedNumber(graphic.get('height')),
             width: bloodWidth,
             height: bloodHeight,
             rotation: randomInteger(MAX_ROTATION),
@@ -55,9 +97,15 @@ on(`change:graphic:${combatBloodOptions.HEALTH_BAR}_value`, function(obj, prev) 
             pageid: graphic.get('_pageid')
         }));
 
-        log('Created blood under graphic');
-        
+        log(`RT: Created blood under graphic ${graphic.get('name')}`);
     }
+
+    function getRandomSignedNumber(max) {
+
+        return randomInteger(max) * (Math.random() < 0.5 ? -1 : 1);
+
+    }
+
 });
 
 on('chat:message', function(obj) {
@@ -79,18 +127,4 @@ on('chat:message', function(obj) {
             });
         }
     }
-});
-
-on('add:character', function(character) {
-
-    createObj('attribute', {
-        name: 'canBleed',
-        current: 1,
-        characterid: character.id
-    });
-    createObj('attribute', {
-        name: 'bleedingType',
-        current: 'default',
-        characterid: character.id
-    });
 });
