@@ -1,4 +1,4 @@
-'use strict'
+'use strict';
 
 on('chat:message', function(obj) {
     
@@ -17,12 +17,10 @@ on('chat:message', function(obj) {
                 _type: 'attribute'
             });
 
-            let attribute;
-
             _.each(attributes, function(attribute) {
 
                 attribute.remove();
-                numOfRemovedOccurences++
+                numOfRemovedOccurences++;
                 
             });
 
@@ -45,9 +43,7 @@ on('chat:message', function(obj) {
 
             _.each(characters, function(character){
 
-                log(character);
-
-                if (!findObjs({_characterid: character.id, _type: 'attribute', name: attributeToBeAdded})[0]) {
+                if (!findObjs({_characterid: character.id, _type: 'attribute', name: attributeToBeAdded}).length) {
                     
                     createObj('attribute', {
                         name: attributeToBeAdded,
