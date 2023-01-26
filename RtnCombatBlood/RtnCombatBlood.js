@@ -3,6 +3,7 @@
 // Options
 //------------------------------------------------------------------
 const combatBloodOptions = {
+    
     HEALTH_BAR: 'bar1',
     BLOOD_TYPE_PREFIX: 'blood_',
     DEFAULT_BLOOD_GRAPHIC_NAME: 'blood_default',
