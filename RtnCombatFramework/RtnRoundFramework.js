@@ -1,5 +1,5 @@
 on('ready', () => {
-    
+
     log('RT: RoundFramework ready!');
 
     if (!state.rtnEncounter) {
@@ -10,126 +10,100 @@ on('ready', () => {
             turn: null,
             numOfCombatants: 0,
             trackingActive: false,
-            difficulty: null
 
         };
     }
 
-    let turnOrder = JSON.parse(Campaign().get('turnorder'));
+});
 
-    on('chat:message', async msg => {
+let turnOrder;
 
-        if (msg.type === 'api' && msg.content.includes('!combat')) {
+on('chat:message', async msg => {
 
-            const option = msg.content.replace('!combat ', '');
-            const rtnRoundFrameworkOptions = {
+    if (msg.type === 'api' && msg.content.includes('!combat')) {
 
-                // Displays the difficulty of the encounter if set to true
-                ANNOUNCE_DIFFICULTY: true,
-                // Divides the XP equally among the players if set to true, if set to false, gives all players the full amount
-                DISTRIBUTE_XP: true,
-                // Automatically adds the XP at the end of a battle
-                AUTO_APPLY_XP: true,
-                // Levels up players automatically if set to true
-                AUTO_LEVEL_UP: true,
-                // Multiplies the XP depending on encounter difficulty
-                DIFFICULTY_MULTIPLIER: true,
-            }
+        const option = msg.content.replace('!combat ', '');
 
-            switch (option) {
-
-                case 'init':
+        switch (option) {
+            
+            case 'init':
 
                 if (!playerIsGM(msg.playerid)) return;
 
-                    state.rtnEncounter = {
+                state.rtnEncounter = {
 
-                        combatRound: 1,
-                        turn: 1,
-                        numOfCombatants: 0,
-                        trackingActive: false
+                    combatRound: 1,
+                    turn: 1,
+                    numOfCombatants: 0,
+                    trackingActive: false
 
-                    };
+                };
 
-                    turnOrder = JSON.parse(Campaign().get('turnorder'));
+                turnOrder = JSON.parse(Campaign().get('turnorder'));
 
-                    if (turnOrder) {
+                if (turnOrder) {
 
-                        turnOrder = null;
+                    turnOrder = null;
 
-                        Campaign().set('turnorder', JSON.stringify(turnOrder));
+                    Campaign().set('turnorder', JSON.stringify(turnOrder));
 
-                    }
+                }
 
-                    await sendChat('', `/desc Roll for initiative!\n[Start Tracking](!combat startTrack)`);
-                    break;
+                await sendChat('', '/desc Combat has started!');
+                await sendChat('', '/w gm [Start Tracking](!combat startTrack)');
+                break;
 
-                case 'startTrack':
+            case 'startTrack':
 
-                    if(!playerIsGM(msg.playerid)) return;
+                if (!playerIsGM(msg.playerid)) return;
 
-                    turnOrder = JSON.parse(Campaign().get('turnorder'));
-                    if (!turnOrder) return sendChat('', '/desc The turn order is empty! Roll for initiative!');
+                turnOrder = JSON.parse(Campaign().get('turnorder'));
 
+                if (!turnOrder) return sendChat('Error', '/w gm The turn order is empty! Roll for initiative!');
 
-
-                    state.rtnEncounter.numOfCombatants = turnOrder.length;
-                    state.rtnEncounter.trackingActive = true;
-
-                    state.rtnEncounter.difficulty = calculateCombatDifficulty(turnOrder);
-
-                    await sendChat('', `/desc The battle has started!\n${state.rtnEncounter.difficulty}`)
-
-                    outputRoundInfo(turnOrder);
-                    break;
+                state.rtnEncounter.numOfCombatants = turnOrder.length;
+                state.rtnEncounter.trackingActive = true;
 
 
-                case 'nextRound':
+                await sendChat('', `/desc The battle has started!\n`);
 
-                    turnOrder = JSON.parse(Campaign().get('turnorder'));
-                    const turnOf = getObj('graphic', turnOrder[state.rtnEncounter.turn - 1].id);
-
-                    if (!state.rtnEncounter.trackingActive || !playerIsGM(msg.playerid) && msg.playerid !== turnOf.get('controlledby')) return;
-
-                    state.rtnEncounter.turn++;
-                    state.rtnEncounter.numOfCombatants = turnOrder.length;
-
-                    if (state.rtnEncounter.numOfCombatants < state.rtnEncounter.turn) {
-
-                        state.rtnEncounter.combatRound++;
-                        state.rtnEncounter.turn = 1;
-
-                    }
-
-                    outputRoundInfo(turnOrder);
-                    break;
+                outputRoundInfo();
+                break;
 
 
-                case 'stopTrack':
-                    if (!state.rtnEncounter.trackingActive || !playerIsGM(msg.playerid)) return;
-                    await sendChat('', '/desc Combat has ended!');
-                    state.rtnEncounter.trackingActive = false;
-                    break;
+            case 'nextRound':
 
-                default:
-                    return;
-            }
+                turnOrder = JSON.parse(Campaign().get('turnorder'));
+                const turnOf = getObj('graphic', turnOrder[state.rtnEncounter.turn - 1].id);
+
+                if (!state.rtnEncounter.trackingActive || !playerIsGM(msg.playerid) && msg.playerid !== turnOf.get('controlledby')) return;
+
+                state.rtnEncounter.turn++;
+                state.rtnEncounter.numOfCombatants = turnOrder.length;
+
+                if (state.rtnEncounter.numOfCombatants < state.rtnEncounter.turn) {
+
+                    state.rtnEncounter.combatRound++;
+                    state.rtnEncounter.turn = 1;
+
+                }
+
+                outputRoundInfo();
+                break;
+
+
+            case 'stopTrack':
+                if (!state.rtnEncounter.trackingActive || !playerIsGM(msg.playerid)) return;
+                await sendChat('', '/desc Combat has ended!');
+                state.rtnEncounter.trackingActive = false;
+                break;
+
+            default:
+                return;
         }
-    });
+    }
 
-    on('change:campaign:turnorder', (obj, prev) => {
-
-        if (obj.get('turnorder') === prev.turnorder) return;
-
-        const turnOrder = JSON.parse(obj.get('turnorder')).sort((a, b) => { 
-            return b.pr - a.pr;
-        });
-
-        obj.set('turnorder', JSON.stringify(turnOrder));
-
-    });
-
-    async function outputRoundInfo(turnOrder) {
+    async function outputRoundInfo() {
 
         const turnOf = getObj('graphic', turnOrder[state.rtnEncounter.turn - 1].id);
 
@@ -140,17 +114,17 @@ on('ready', () => {
 
     }
 
-    function calculateCombatDifficulty(turnOrder) {
-        
-        const playerLevels;
-        const numOfMonsters;
-    }
-
-    function calculateXp(turnOrder) {
-
-    }
-
-    
 });
 
 
+on('change:campaign:turnorder', (obj, prev) => {
+
+    if (obj.get('turnorder') === prev.turnorder) return;
+
+    const turnOrder = JSON.parse(obj.get('turnorder')).sort((a, b) => {
+        return b.pr - a.pr;
+    });
+
+    obj.set('turnorder', JSON.stringify(turnOrder));
+
+});
