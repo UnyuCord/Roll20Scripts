@@ -1,3 +1,5 @@
+var RtnRoundFramework = RtnRoundFramework || {};
+
 on('ready', () => {
 
     log('RT: RoundFramework ready!');
@@ -113,7 +115,6 @@ on('chat:message', async msg => {
         sendPing(turnOf.get('left'), turnOf.get('top'), Campaign().get('playerpageid'));
 
     }
-
 });
 
 
@@ -121,10 +122,8 @@ on('change:campaign:turnorder', (obj, prev) => {
 
     if (obj.get('turnorder') === prev.turnorder) return;
 
-    const turnOrder = JSON.parse(obj.get('turnorder')).sort((a, b) => {
-        return b.pr - a.pr;
-    });
+    const sortedTurnOrder = JSON.parse(obj.get('turnorder')).sort((a, b) => b.pr - a.pr);
 
-    obj.set('turnorder', JSON.stringify(turnOrder));
+    obj.set('turnorder', JSON.stringify(sortedTurnOrder));
 
 });
