@@ -1,5 +1,3 @@
-'use strict'
-
 // Options
 //------------------------------------------------------------------
 const combatBloodOptions = {
@@ -41,7 +39,7 @@ on(`change:graphic:${combatBloodOptions.HEALTH_BAR}_value`, function(obj, prev) 
 
     const currentHealthVal = graphic.get(`${combatBloodOptions.HEALTH_BAR}_value`);
     const prevHealthVal = prev[`${combatBloodOptions.HEALTH_BAR}_value`];
-    const character =  getObj('character', graphic.get('_represents'));
+    const character = getObj('character', graphic.get('_represents'));
 
     if (!character) return;
 
