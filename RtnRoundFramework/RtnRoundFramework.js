@@ -11,7 +11,7 @@ on('ready', () => {
             combatRound: 1,
             turn: null,
             numOfCombatants: 0,
-            trackingActive: false,
+            trackingActive: false
 
         };
     }
