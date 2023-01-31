@@ -1,41 +1,39 @@
-// Options
-var RtnAutoDamage = RtnAutoDamage || {};
+var RtnAutoDamage = RtnAutoDamage || (function () {
 
-RtnAutoDamage.Options = {
+    const options = {
 
-    HEALTH_BAR: 'bar1',
-    ANNOUNCE_PLAYER_DAMAGE: true,
-    ANNOUNCE_MONSTER_DAMAGE: true
+        HEALTH_BAR: 'bar1',
+        ANNOUNCE_PLAYER_DAMAGE: true,
+        ANNOUNCE_MONSTER_DAMAGE: true
 
-};
+    };
 
-RtnAutoDamage.AutoDamage = {
+    const handleChatMessage = async function (origMsg) {
 
-    enabled: true,
-    lastDamageRoll: null
+        const message = _.clone(origMsg);
 
-};
+        if (message.inlinerolls && (/{{dmg\d=/).test(message.content)) {
 
-on('ready', () => {
+            handleInlineDamageRoll(message);
 
-    log('RT: RtnAutoDamage ready!');
+        }
 
-});
+        if (message.type === 'api' && message.content.includes('!autoDamage')) {
 
-on('chat:message', async origMsg => {
+            handleApiCommand(message);
 
-    if (!RtnAutoDamage.AutoDamage.enabled) return;
+        }
 
-    const message = _.clone(origMsg);
 
-    if (message.inlinerolls && (/{{dmg\d=/).test(message.content)) {
+
+    };
+
+    function handleInlineDamageRoll(message) {
 
         const extractedRoll = extractRoll(message);
-
         const [dmg1, dmg2, dmg1type, dmg2type] = getMultipleValFromExtractedRoll(
             extractedRoll,
             ['dmg1', 'dmg2', 'dmg1type', 'dmg2type']);
-
 
         let crit1 = 0;
         let crit2 = 0;
@@ -49,11 +47,11 @@ on('chat:message', async origMsg => {
         const ACTION_BASIC_ATTACK = `\n[Attack selected](&#96;!autoDamage regularAttack ${message.playerid} ${dmg1} ${dmg2} ${dmg1type} ${dmg2type} ${crit1} ${crit2} " style="font-size:16px"><img src="https://s3.amazonaws.com/files.d20.io/images/19/Vp6EsSd3aGqqL78ZPmw1WQ/icon.png?1575370629)`;
         const ACTION_HEAL = `\n[\tHeal selected](&#96;!autoDamage heal ${message.playerid} ${dmg1} ${dmg2} ${dmg1type} ${dmg2type} ${crit1} ${crit2} " style="font-size:16px"><img src="https://s3.amazonaws.com/files.d20.io/images/9/Ocz5uo9OTzzqpVHfOEYqqQ/icon.png?1575370618)`;
 
-        return await sendChat('Combat Menu', `${ACTION_BASIC_ATTACK + ACTION_HEAL}`);
+        return sendChat('Combat Menu', `${ACTION_BASIC_ATTACK + ACTION_HEAL}`);
 
     }
 
-    if (message.type === 'api' && message.content.includes('!autoDamage')) {
+    function handleApiCommand(message) {
 
         const args = message.content.replace('!autoDamage ', '').split(' ');
         if (args[1] !== message.playerid || !playerIsGM(message.playerid)) return;
@@ -79,27 +77,28 @@ on('chat:message', async origMsg => {
                 targets.forEach(async target => {
 
                     const graphic = getObj('graphic', target._id);
-                    log(graphic);
                     const character = getObj('character', graphic.get('_represents'));
                     const type = (character.get('controlledby') === '') ? 'Monster' : 'Player';
                     const currentHealth = getAttrByName(character.id, 'hp');
                     const totalDamage = apiButtonData.primaryDamage + apiButtonData.secondaryDamage + apiButtonData.primaryCritDamage + apiButtonData.secondaryDamage;
-                    log(`damage: ${totalDamage}`);
 
-                    graphic.set(`${RtnAutoDamage.Options.HEALTH_BAR}_value`, currentHealth - totalDamage);
-                    log('Set damage');
+                    log(currentHealth - totalDamage);
+                    graphic.set(`${options.HEALTH_BAR}_value`, currentHealth - totalDamage);
 
-                    if (RtnAutoDamage.Options.ANNOUNCE_MONSTER_DAMAGE && type === 'Monster') {
-                        await sendChat('', `/desc ${character.get('name')} received ${totalDamage} ${apiButtonData.primaryDamageType}/${apiButtonData.secondaryDamageType} damage!`);
-                        return;
+                    if (typeof RtnCombatBlood !== 'undefined') {
+
+                        log('Found RtnCombatBlood');
+                        RtnCombatBlood.createBlood(graphic, currentHealth);
                     }
 
-                    if (RtnAutoDamage.Options.ANNOUNCE_PLAYER_DAMAGE && type === 'Player') {
-                        await sendChat('', `/desc ${character.get('name')} received ${totalDamage} ${apiButtonData.primaryDamageType}/${apiButtonData.secondaryDamageType} damage!`);
-                        return;
+                    if (options.ANNOUNCE_MONSTER_DAMAGE && type === 'Monster') {
+                        return await sendChat('', `/desc ${character.get('name')} received ${totalDamage} ${apiButtonData.primaryDamageType}/${apiButtonData.secondaryDamageType} damage!`);
                     }
 
-                    log(target);
+                    if (options.ANNOUNCE_PLAYER_DAMAGE && type === 'Player') {
+                        return await sendChat('', `/desc ${character.get('name')} received ${totalDamage} ${apiButtonData.primaryDamageType}/${apiButtonData.secondaryDamageType} damage!`);
+                    }
+
                 });
                 break;
 
@@ -110,7 +109,7 @@ on('chat:message', async origMsg => {
             default: return;
 
         }
-    }
+    };
 
     function extractRoll(msg) {
 
@@ -169,4 +168,23 @@ on('chat:message', async origMsg => {
 
         return extractedValues;
     }
+
+    const registerEventHandlers = function () {
+        on('chat:message', handleChatMessage);
+    };
+
+    return {
+
+        registerEventHandlers
+
+    };
+
+})();
+
+
+on('ready', () => {
+
+    RtnAutoDamage.registerEventHandlers();
+    log('RT: AutoDamage ready!');
+
 });
