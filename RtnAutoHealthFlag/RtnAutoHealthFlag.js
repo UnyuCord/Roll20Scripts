@@ -31,7 +31,7 @@ var RtnHealthFlag = RtnHealthFlag || (function () {
 
             }
 
-        } else if(type === 'Player') {
+        } else if (type === 'Player') {
 
             graphic.set({
                 'status_death-zone': false
@@ -58,6 +58,8 @@ var RtnHealthFlag = RtnHealthFlag || (function () {
                 await sendChat('', `/desc ${graphic.get('name')} is bloodied!`);
 
             }
+        } else {
+            graphic.set({'status_broken-heart': false});
         }
     };
 
