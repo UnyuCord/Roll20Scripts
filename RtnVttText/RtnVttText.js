@@ -1,4 +1,6 @@
-var RtnVttText = RtnVttText || (function() {
+var RtnVttText = RtnVttText || (function () {
+
+    let messageQueue = [];
 
     const options = {
         usePlayerColor: true,
@@ -10,25 +12,26 @@ var RtnVttText = RtnVttText || (function() {
         lingerDuration: 10
     }
 
-    const drawText = function(text, portrait) {
+    const drawText = function (text, portrait) {
 
     }
 
-    const handleChatEvent = function(origMessage) {
+    const handleChatEvent = function (origMessage) {
         const message = _.clone(origMessage);
         const character = getObj('player', message.playerid);
         const currentPage = Campaign().get('playerpageid');
-        const 
-        // Don't handle when message isn't a normal message or has no content
-        if (message.type != 'general' || !message.content) return;
+    
+        // Don't handle when message isn't a normal message, has no content or is by a player.
+        if (message.type != 'general' || !message.content || _.contains(character.get('speakingas').split('|'), 'player')) return;
 
-        log(character.get('speakingas'));
+        const characterId = character.get('speakingas').split('|')[1];
+        log(characterId);
         log(currentPage);
 
-        
+
     }
 
-    const registerEventHandlers = function() {
+    const registerEventHandlers = function () {
         on('chat:message', handleChatEvent);
     }
 
