@@ -1,12 +1,17 @@
 var RtnRoundFramework = RtnRoundFramework || (function () {
 
+    const options = {
+        // Clears turnOrder after ending the encoounter.
+        clearTurnOrderPostStopTrack: true
+    }
+
     const handleApiCommand = async function (msg) {
 
         if (msg.type === 'api' && msg.content.includes('!combat')) {
 
-            const option = msg.content.replace('!combat ', '');
+            const command = msg.content.replace('!combat ', '');
 
-            switch (option) {
+            switch (command) {
 
                 case 'init':
 
@@ -21,15 +26,7 @@ var RtnRoundFramework = RtnRoundFramework || (function () {
 
                     };
 
-                    turnOrder = JSON.parse(Campaign().get('turnorder'));
-
-                    if (turnOrder) {
-
-                        turnOrder = null;
-
-                        Campaign().set('turnorder', JSON.stringify(turnOrder));
-
-                    }
+                    turnOrder = getTurnOrder();
 
                     await sendChat('', '/desc Combat has started!\n/desc Roll for initiative!');
                     await sendChat('', '/w gm [Start Tracking](!combat startTrack)');
@@ -39,7 +36,8 @@ var RtnRoundFramework = RtnRoundFramework || (function () {
 
                     if (!playerIsGM(msg.playerid)) return;
 
-                    turnOrder = JSON.parse(Campaign().get('turnorder'));
+                    turnOrder = getTurnOrder();
+                    log(turnOrder)
 
                     if (!turnOrder) return sendChat('Error', '/w gm The turn order is empty! Roll for initiative!');
 
@@ -55,13 +53,26 @@ var RtnRoundFramework = RtnRoundFramework || (function () {
 
                 case 'nextRound':
 
-                    turnOrder = JSON.parse(Campaign().get('turnorder'));
+                    if (!state.rtnEncounter.trackingActive) return;
+
+                    turnOrder = getTurnOrder();
+                    state.rtnEncounter.numOfCombatants = turnOrder.length;
+
+                    /* 
+                    The turnorder could be empty when the GM removes every token, in that case
+                    we simply end the encounter
+                    */
+                    if (state.rtnEncounter.numOfCombatants <= 0) {
+
+                        state.rtnEncounter.trackingActive = false;
+                        return sendChat('Error', '/w gm The turn order is empty! Ending combat...');
+                    }
+
                     const turnOf = getObj('graphic', turnOrder[state.rtnEncounter.turn - 1].id);
 
-                    if (!state.rtnEncounter.trackingActive || !playerIsGM(msg.playerid) && msg.playerid !== turnOf.get('controlledby')) return;
+                    if (!playerIsGM(msg.playerid) && msg.playerid !== turnOf.get('controlledby')) return;
 
                     state.rtnEncounter.turn++;
-                    state.rtnEncounter.numOfCombatants = turnOrder.length;
 
                     if (state.rtnEncounter.numOfCombatants < state.rtnEncounter.turn) {
 
@@ -78,6 +89,14 @@ var RtnRoundFramework = RtnRoundFramework || (function () {
                     if (!state.rtnEncounter.trackingActive || !playerIsGM(msg.playerid)) return;
                     await sendChat('', '/desc Combat has ended!');
                     state.rtnEncounter.trackingActive = false;
+
+                    if (options.clearTurnOrderPostStopTrack) {
+
+                        turnOrder = null;
+                        Campaign().set('turnorder', JSON.stringify(turnOrder));
+
+                    }
+
                     break;
 
                 default:
@@ -88,6 +107,8 @@ var RtnRoundFramework = RtnRoundFramework || (function () {
     }
 
     const outputEndOfRoundInfo = async function () {
+
+        turnOrder = getTurnOrder();
 
         const turnOf = getObj('graphic', turnOrder[state.rtnEncounter.turn - 1].id);
 
@@ -102,15 +123,48 @@ var RtnRoundFramework = RtnRoundFramework || (function () {
 
         if (currentState.get('turnorder') === previousState.turnorder) return;
 
-        const sortedTurnOrder = JSON.parse(currentState.get('turnorder')).sort((a, b) => b.pr - a.pr);
+        const sortedTurnOrder = getTurnOrder().sort((a, b) => b.pr - a.pr);
 
         currentState.set('turnorder', JSON.stringify(sortedTurnOrder));
+
+    }
+
+    const removeFromTurnOrder = function (token) {
+
+        let entry;
+        turnOrder = getTurnOrder();
+
+        if (entry = _.find(turnOrder, function (turnOrderEntry) { return turnOrderEntry.id == token.get('_id') })) {
+
+
+            const newTurnOrder = _.without(turnOrder, entry);
+
+            if (!turnOrder[state.rtnEncounter.turn - 1].id) {
+                state.rtnEncounter.combatRound++;
+                state.rtnEncounter.turn = 1;
+            }
+
+            Campaign().set('turnorder', JSON.stringify(newTurnOrder));
+
+
+        }
+    }
+
+
+    const getTurnOrder = function () {
+        return JSON.parse(Campaign().get('turnorder'));
     }
 
     const registerEventHandlers = function () {
 
         on('chat:message', handleApiCommand);
         on('change:campaign:turnorder', (obj, prev) => orderTurnOrder(obj, prev));
+        /*
+         For some reason, when a token gets removed, it removes it from the 
+         turnorder on the tabletop but api-side it doesn't, thats why we remove
+         it ourselves
+        */
+        on('destroy:token', removeFromTurnOrder)
 
     }
 
@@ -129,9 +183,13 @@ on('ready', () => {
 
         state.rtnEncounter = {
 
+            // Increases after all turns were made
             combatRound: 1,
+            // Increases upon clicking the "Next turn" button
             turn: null,
+            // Tracks the total number of tokens in the turnOrder
             numOfCombatants: 0,
+            // If set to false: will make some commands not do anything
             trackingActive: false
 
         };
