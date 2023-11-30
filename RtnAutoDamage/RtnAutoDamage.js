@@ -74,32 +74,8 @@ var RtnAutoDamage = RtnAutoDamage || (function () {
         switch (apiButtonData.command) {
 
             case 'regularAttack':
-                targets.forEach(async target => {
+                executeRegularAttack(targets, apiButtonData);                
 
-                    const graphic = getObj('graphic', target._id);
-                    const character = getObj('character', graphic.get('_represents'));
-                    const type = (character.get('controlledby') === '') ? 'Monster' : 'Player';
-                    const currentHealth = getAttrByName(character.id, 'hp');
-                    const totalDamage = apiButtonData.primaryDamage + apiButtonData.secondaryDamage + apiButtonData.primaryCritDamage + apiButtonData.secondaryDamage;
-
-                    log(currentHealth - totalDamage);
-                    graphic.set(`${options.HEALTH_BAR}_value`, currentHealth - totalDamage);
-
-                    if (typeof RtnCombatBlood !== 'undefined') {
-
-                        log('Found RtnCombatBlood');
-                        RtnCombatBlood.createBlood(graphic, currentHealth);
-                    }
-
-                    if (options.ANNOUNCE_MONSTER_DAMAGE && type === 'Monster') {
-                        return await sendChat('', `/desc ${character.get('name')} received ${totalDamage} ${apiButtonData.primaryDamageType}/${apiButtonData.secondaryDamageType} damage!`);
-                    }
-
-                    if (options.ANNOUNCE_PLAYER_DAMAGE && type === 'Player') {
-                        return await sendChat('', `/desc ${character.get('name')} received ${totalDamage} ${apiButtonData.primaryDamageType}/${apiButtonData.secondaryDamageType} damage!`);
-                    }
-
-                });
                 break;
 
             case 'heal':
@@ -110,6 +86,45 @@ var RtnAutoDamage = RtnAutoDamage || (function () {
 
         }
     };
+
+    function executeRegularAttack(targets, apiButtonData) {
+
+        targets.forEach(async target => {
+
+            const graphic = getObj('graphic', target._id);
+            const character = getObj('character', graphic.get('_represents'));
+            const type = (character.get('controlledby') === '') ? 'Monster' : 'Player';
+            const currentHealth = graphic.get(`${options.HEALTH_BAR}_value`);
+            const totalDamage = apiButtonData.primaryDamage + apiButtonData.secondaryDamage + apiButtonData.primaryCritDamage + apiButtonData.secondaryDamage;
+
+            log(currentHealth - totalDamage);
+            log(currentHealth);
+            graphic.set(`${options.HEALTH_BAR}_value`, currentHealth - totalDamage);
+
+            if (typeof RtnCombatBlood !== 'undefined') {
+
+                log('Found RtnCombatBlood');
+                RtnCombatBlood.createBlood(graphic, currentHealth);
+            }
+
+            if (typeof RtnHealthFlag !== 'undefined') {
+
+                log('Found RtnHealthFlag');
+                RtnHealthFlag.updateHealthFlags(graphic);
+            }
+
+            if (options.ANNOUNCE_MONSTER_DAMAGE && type === 'Monster') {
+                return await sendChat('', `/desc ${character.get('name')} received ${totalDamage} ${apiButtonData.primaryDamageType}/${apiButtonData.secondaryDamageType} damage!`);
+            }
+
+            if (options.ANNOUNCE_PLAYER_DAMAGE && type === 'Player') {
+                return await sendChat('', `/pdesc ${character.get('name')} received ${totalDamage} ${apiButtonData.primaryDamageType}/${apiButtonData.secondaryDamageType} damage!`);
+            }
+
+        });
+
+
+    }
 
     function extractRoll(msg) {
 
