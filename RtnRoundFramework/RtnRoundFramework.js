@@ -1,7 +1,7 @@
 var RtnRoundFramework = RtnRoundFramework || (function () {
 
     const options = {
-        // Clears turnOrder after ending the encoounter.
+        // Clears turnOrder after ending the encounter.
         clearTurnOrderPostStopTrack: true
     }
 
