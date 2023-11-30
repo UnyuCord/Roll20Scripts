@@ -37,7 +37,6 @@ var RtnRoundFramework = RtnRoundFramework || (function () {
                     if (!playerIsGM(msg.playerid)) return;
 
                     turnOrder = getTurnOrder();
-                    log(turnOrder)
 
                     if (!turnOrder) return sendChat('Error', '/w gm The turn order is empty! Roll for initiative!');
 
