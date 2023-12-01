@@ -8,6 +8,8 @@ var RtnHealthFlag = RtnHealthFlag || (function () {
         const character = getObj('character', token.get('_represents'));
         const type = (character.get('controlledby') === '') ? 'Monster' : 'Player';
 
+        if (!token.get(`${HEALTH_BAR}_value`)) return;
+        // TODO: For some reason sometimes these flags just don't get applied uhhh fix it lmfao xd
         if (token.get(`${HEALTH_BAR}_value`) <= 0) {
 
             if (token.get('status_dead') || token.get('status_death-zone')) return;
@@ -82,7 +84,7 @@ var RtnHealthFlag = RtnHealthFlag || (function () {
     const registerEventHandlers = function () {
 
         on('add:token', handleAddGraphic);
-        on('change:token', updateHealthFlags);
+        on(`change:token:${HEALTH_BAR}_value`, updateHealthFlags);
 
     };
 
