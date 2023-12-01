@@ -1,39 +1,52 @@
-var RtnCombatBlood = RtnCombatBlood || (function() {
+var RtnCombatBlood = RtnCombatBlood || (function () {
     'use strict';
 
     const options = {
 
-        // Dictates which bar is seen as the health bar
+        // Dictates which bar is seen as the health bar on tokens
         HEALTH_BAR: 'bar1',
         // A prefix to mark blood graphics in the journal, put '' if you don't want a prefix
         BLOOD_TYPE_PREFIX: 'blood_',
-        // Name of the default blood graphic
+        // Name of the default blood graphic, will also be used as the fallback graphic
         DEFAULT_BLOOD_GRAPHIC_NAME: 'blood_default',
         // Minimum needed multiplier to create a blood graphic, change to 0 to allow any value
         MIN_ALLOWED_MULTIPLIER: 0.10,
-        // This multiplier dictates the maximum size of a blood graphic, the max blood size is calculated by multiplying the 
-        // tokens size by the multiplier
+        /** 
+        This multiplier dictates the maximum size of a blood graphic, the max blood size is calculated by multiplying the 
+        tokens size by the multiplier
+        */
         MAX_SIZE_MULTIPLIER: 1.5,
         // The base width and height of the token before any calculations
         BLOOD_BASE_SIZE: {
             WIDTH: 400,
             HEIGHT: 400
-        }
+        },
+        // Maximum blood rotation in degrees
+        MAX_ROTATION: 360
     };
 
-    const createBlood = function(origGraphic, prevHealthVal) {
+
+    /**
+     * Creates a blood graphic near a graphic.
+     * @param origGraphic Roll20 graphic object
+     * @param prevHealthVal Health value of the token before being damaged
+     */
+    const createBlood = function (origGraphic, prevHealthVal) {
 
         const graphic = _.clone(origGraphic);
         const character = getObj('character', graphic.get('_represents'));
-
-        if (!character) return;
-
         const currentHealthVal = graphic.get(`${options.HEALTH_BAR}_value`);
+
+        // If the graphic does not have a character tied to it, or has no hp value, return
+        if (!character || !currentHealthVal) return;
+
         const damageDealt = currentHealthVal - prevHealthVal;
         const characterBleeds = getAttrByName(character.id, 'canBleed') || 1;
 
+        // Only proceed if actual damage was dealt and the character bleeds
         if (damageDealt < 0 && characterBleeds == 1) {
 
+            // Depending on the damage dealt, the blood splatter will be bigger
             const bloodScaleMultiplier = Math.abs(damageDealt / graphic.get(`${options.HEALTH_BAR}_max`));
             if (bloodScaleMultiplier < options.MIN_ALLOWED_MULTIPLIER) return;
 
@@ -62,12 +75,12 @@ var RtnCombatBlood = RtnCombatBlood || (function() {
             const maximumWidth = graphic.get('width') * options.MAX_SIZE_MULTIPLIER;
             const maximumHeight = graphic.get('height') * options.MAX_SIZE_MULTIPLIER;
 
+            // Should dimensions of graphic surpass the max allowed multiplier, set values to those maximums
             if (bloodWidth > maximumWidth || bloodHeight > maximumHeight && options.BLOOD_BASE_SIZE.WIDTH > 0) {
 
                 bloodWidth = maximumWidth;
                 bloodHeight = maximumHeight;
             }
-            const MAX_ROTATION = 360;
 
             toFront(createObj('graphic', {
 
@@ -77,9 +90,10 @@ var RtnCombatBlood = RtnCombatBlood || (function() {
                 top: graphic.get('top') + getRandomSignedNumber(graphic.get('height')),
                 width: bloodWidth,
                 height: bloodHeight,
-                rotation: randomInteger(MAX_ROTATION),
+                rotation: randomInteger(options.MAX_ROTATION),
                 layer: 'map',
                 pageid: graphic.get('_pageid')
+
             }));
 
             log(`RT: Created blood under graphic ${graphic.get('name')}`);
@@ -93,7 +107,7 @@ var RtnCombatBlood = RtnCombatBlood || (function() {
 
     };
 
-    const handleChatMessage = function(origMsg) {
+    const handleChatMessage = function (origMsg) {
 
         const msg = _.clone(origMsg);
         if (msg.type === 'api' && msg.content.includes('!blood') && playerIsGM(msg.playerid)) {
@@ -114,7 +128,7 @@ var RtnCombatBlood = RtnCombatBlood || (function() {
         }
     };
 
-    const handleAddCharacter = function(character) {
+    const handleAddCharacter = function (character) {
 
         createObj('attribute', {
             name: 'canBleed',
@@ -129,9 +143,9 @@ var RtnCombatBlood = RtnCombatBlood || (function() {
 
     };
 
-    const registerEventHandlers = function() {
+    const registerEventHandlers = function () {
 
-        on(`change:graphic:${options.HEALTH_BAR}_value`, (graphic, prev) => createBlood(graphic, prev[`${options.HEALTH_BAR}_value`]));
+        on(`change:token:${options.HEALTH_BAR}_value`, (graphic, prev) => createBlood(graphic, prev[`${options.HEALTH_BAR}_value`]));
         on('chat:message', handleChatMessage);
         on('add:character', handleAddCharacter);
 
@@ -139,6 +153,7 @@ var RtnCombatBlood = RtnCombatBlood || (function() {
 
     return {
 
+        // Return createBlood function here, so it can be used by other scripts
         createBlood,
         registerEventHandlers
 
